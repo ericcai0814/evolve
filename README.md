@@ -1,15 +1,15 @@
 # evolve
 
-Configuration ecosystem auditor for Claude Code. Audits the health of your `~/.claude/` setup — agents, skills, hooks, rules, and memory — via an orchestrator that dispatches six specialized auditor sub-agents in parallel and synthesizes a GO / CONDITIONAL-GO / NO-GO report.
+Claude Code 配置生態系健檢工具。`/evolve` 觸發 orchestrator 平行 dispatch 六個 specialized auditor sub-agents，稽核 `~/.claude/` 的 agents / skills / hooks / rules / memory 健康度，產出 **GO** / **CONDITIONAL-GO** / **NO-GO** 報告。
 
-## What it does
+## 做什麼
 
-Running `/evolve` triggers the `evolve-orchestrator` agent, which:
+執行 `/evolve` 後，`evolve-orchestrator` agent 會：
 
-1. **Inventories** the user-global Claude Code config under `~/.claude/`
-2. **Determines mode** — `audit` (periodic health check) / `evolve` (recommend upgrades) / `react` (one-off recommendation based on session signals)
-3. **Spawns six sub-agents in parallel** — each focused on a single config domain
-4. **Synthesizes** their findings into a single report with severity weighting
+1. **掃描盤點**：列出 `~/.claude/` 下 user-global 的所有配置 artifact
+2. **判定模式**：`audit`（定期健檢）/ `evolve`（建議升級）/ `react`（依當前 session 訊號建議該補哪類 artifact）
+3. **平行派遣**：spawn 六個 sub-agent，每個專責單一配置領域
+4. **彙整**：套 severity 權重，產出單一決策報告
 
 ```
               /evolve
@@ -24,67 +24,67 @@ auditor auditor reviewer auditor auditor checker
 (sonnet, sonnet, sonnet, haiku, sonnet, sonnet)
 ```
 
-A lightweight bash version of the rules check also runs once-per-day in the background via the SessionStart hook — see [Scheduled audit](#scheduled-audit) below.
+另外註冊一個 `SessionStart` hook，每天背景跑一次輕量靜態檢查（rule 行數、TODO 標記、CLAUDE.md 長度）— 見下方〈[排程稽核](#排程稽核)〉。
 
-## Install
+## 安裝
 
 ```
 /plugin marketplace add ericcai0814/claude-plugins
 /plugin install evolve
 ```
 
-Or for development / local install:
+本機開發 / 本地安裝：
 
 ```
 git clone https://github.com/ericcai0814/evolve.git
-/plugin install file:///absolute/path/to/evolve
+/plugin install file:///絕對路徑/evolve
 ```
 
-## Use
+## 使用方式
 
-| Invocation | What happens |
+| 指令 | 行為 |
 |---|---|
-| `/evolve` | Full audit, default mode (orchestrator decides between audit / react) |
-| `/evolve audit` | Force periodic-health-check mode |
-| `/evolve evolve` | Recommend upgrades to existing config |
-| `/evolve react` | Recommend new config artifact based on session signals |
+| `/evolve` | 完整稽核，預設模式（由 orchestrator 自行決定 audit 或 react） |
+| `/evolve audit` | 強制走定期健檢模式 |
+| `/evolve evolve` | 針對現有配置建議升級方向 |
+| `/evolve react` | 依當前 session 訊號建議該新增什麼 artifact |
 
-The full audit takes ~1-2 min (six sub-agents run in parallel).
+完整稽核約耗時 1-2 分鐘（六個 sub-agent 平行跑）。
 
-## Scope
+## 稽核範圍
 
-evolve is **user-global**: it audits `~/.claude/` regardless of which project you are in. Running `/evolve` from any project produces the same report.
+evolve 是 **user-global** 工具：永遠稽核 `~/.claude/`，不看當下 CWD。在任何專案下執行 `/evolve` 都會產生同一份報告。
 
-Per-project `.claude/` auditing is not currently supported (may be added via `--scope=project` flag in a future version).
+目前不支援 per-project `.claude/` 的稽核（未來可能透過 `--scope=project` 參數加上）。
 
-## Scheduled audit
+## 排程稽核
 
-The plugin registers a `SessionStart` hook that runs a lightweight static scan (rule file line counts, TODO markers, CLAUDE.md size) in the background. Report is written to:
+Plugin 會註冊一個 `SessionStart` hook，每次開新 session 時背景跑輕量靜態檢查。報告寫到：
 
 ```
 ~/.claude/evolve/log/YYYY-MM-DD.md
 ```
 
-Once-per-day guard built into the script — re-opening sessions throughout the day does not duplicate work. To force re-run:
+腳本內建「每日只跑一次」保護 — 同一天重開多次 session 不會重複產生報告。要強制重跑：
 
 ```bash
 rm ~/.claude/evolve/log/$(date +%Y-%m-%d).md
 bash ${CLAUDE_PLUGIN_ROOT}/hooks/scheduled-evolve.sh
 ```
 
-## Optional integrations
+## Optional 整合
 
-- **hookify plugin** — if installed, `hook-auditor` defers to `hookify:writing-rules` for rule-quality conventions. If not installed, falls back to general hook-quality criteria from `evolve-config/ref-hook-design.md`. No hard dependency.
+- **hookify plugin** — 若有安裝，`hook-auditor` 會 defer 給 `hookify:writing-rules` skill 拿規則品質慣例。沒裝就 fallback 到 `evolve-config/ref-hook-design.md` 的通用標準。**沒有硬相依**。
 
-## Plugin structure
+## Plugin 結構
 
 ```
 evolve/
 ├── .claude-plugin/plugin.json
-├── commands/evolve.md                     # /evolve entry
+├── commands/evolve.md                     # /evolve 入口
 ├── agents/
-│   ├── evolve-orchestrator.md             # Opus, orchestrates audit
-│   └── evolve/                            # Sub-agent auditors
+│   ├── evolve-orchestrator.md             # Opus，主控
+│   └── evolve/                            # 六個 sub-agent auditor
 │       ├── agent-auditor.md
 │       ├── hook-auditor.md
 │       ├── memory-reviewer.md
@@ -92,17 +92,21 @@ evolve/
 │       ├── skill-auditor.md
 │       └── standards-drift-checker.md
 ├── skills/
-│   └── evolve-config/                     # Decision framework + reference docs
+│   └── evolve-config/                     # 決策框架 + reference 文件
 │       ├── SKILL.md
 │       └── ref-{agent-design, config-audit, hook-design,
 │            memory-quality, official-standards, rules-optimization,
 │            skill-authoring, skill-patterns}.md
 ├── hooks/
 │   ├── hooks.json                         # SessionStart -> scheduled-evolve.sh
-│   └── scheduled-evolve.sh                # Lightweight bash static scan
+│   └── scheduled-evolve.sh                # 輕量 bash 靜態掃描
 └── scripts/
-    └── skill-static-test.sh               # Zero-dependency skill validator
+    └── skill-static-test.sh               # 零相依 skill validator
 ```
+
+## English
+
+See [README.en.md](README.en.md) for the English version.
 
 ## License
 
