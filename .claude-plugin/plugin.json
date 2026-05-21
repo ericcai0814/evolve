@@ -1,0 +1,10 @@
+{
+  "name": "evolve",
+  "version": "0.1.0",
+  "description": "Configuration ecosystem auditor for Claude Code. Audits agents, skills, hooks, rules, and memory health via an orchestrator plus six specialized auditor sub-agents.",
+  "author": {
+    "name": "ericcai0814"
+  },
+  "homepage": "https://github.com/ericcai0814/evolve",
+  "keywords": ["audit", "config", "agents", "skills", "hooks", "rules", "memory", "orchestrator"]
+}
