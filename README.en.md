@@ -104,6 +104,10 @@ evolve/
     └── skill-static-test.sh               # Zero-dependency skill validator
 ```
 
+## 中文
+
+繁體中文版見 [README.md](README.md)。
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
