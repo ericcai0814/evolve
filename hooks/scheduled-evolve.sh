@@ -18,7 +18,7 @@ set -euo pipefail
 
 # ── 常數定義 ──────────────────────────────────────────────
 CLAUDE_DIR="$HOME/.claude"
-EVOLVE_LOG_DIR="$HOME/.claude/homunculus/evolve-log"
+EVOLVE_LOG_DIR="$HOME/.claude/evolve/log"
 TODAY=$(date '+%Y-%m-%d')
 REPORT_FILE="$EVOLVE_LOG_DIR/${TODAY}.md"
 SKILL_USAGE_LOG="$CLAUDE_DIR/skill-usage.log"
@@ -75,7 +75,7 @@ run_rules_audit() {
     append_report "## Rules 靜態掃描"
     append_report ""
 
-    local rules_dir="$HOME/dotfiles/claude/rules"
+    local rules_dir="$HOME/.claude/rules"
     local issues=0
 
     if [[ ! -d "$rules_dir" ]]; then
@@ -103,7 +103,7 @@ run_rules_audit() {
     done < <(find "$rules_dir" -name "*.md" -print0 2>/dev/null)
 
     # 規則 3：CLAUDE.md 行數
-    local claude_md="$HOME/dotfiles/claude/CLAUDE.md"
+    local claude_md="$HOME/.claude/CLAUDE.md"
     if [[ -f "$claude_md" ]]; then
         local claude_lines
         claude_lines=$(wc -l < "$claude_md" | tr -d ' ')

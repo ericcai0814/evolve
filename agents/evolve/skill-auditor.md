@@ -15,7 +15,7 @@ You are a skill configuration auditor. Review all skill definitions for quality 
 Run the static test script first — it catches structural errors (broken ref-*.md, missing frontmatter, agent reference mismatches, size violations) with zero false positives:
 
 ```bash
-bash ~/dotfiles/claude/scripts/skill-static-test.sh
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/skill-static-test.sh"
 ```
 
 Include ALL its HIGH/MED findings in your report verbatim. Then proceed to the manual checks below for quality issues the script cannot catch.
@@ -58,7 +58,7 @@ description: Use when writing, updating, or reviewing auto memory entries.
 - Cross-reference usage data with skill count to identify consolidation candidates
 
 ### Promotion Candidates (Homunculus Integration)
-- If `~/.claude/homunculus/promotion-candidates.json` exists, read it
+- If `~/.claude/evolve/promotion-candidates.json` exists, read it
 - For each candidate where `recommendation` is NOT `skip`:
   - Report as LOW finding: `[LOW] Instinct "{instinct}" (confidence: {confidence}) may be worth promoting to [{recommendation}]`
 - If the file doesn't exist or is empty, skip silently
@@ -69,7 +69,7 @@ description: Use when writing, updating, or reviewing auto memory entries.
 - Reference files are under 200 lines each
 
 ### Global Consistency
-- When a threshold or standard is referenced (e.g., "500 lines", "200 lines"), grep across ALL config files (`~/dotfiles/claude/`) to confirm every occurrence uses the same value
+- When a threshold or standard is referenced (e.g., "500 lines", "200 lines"), grep across ALL config files (`${CLAUDE_PLUGIN_ROOT}/` and `~/.claude/`) to confirm every occurrence uses the same value
 - Flag any inconsistency as MED with all file locations listed
 
 ## Severity Definitions

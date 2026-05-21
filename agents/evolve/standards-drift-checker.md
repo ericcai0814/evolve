@@ -14,7 +14,7 @@ You check whether ref-official-standards.md is still aligned with official Claud
 
 ### Step 1: Read Current Standards
 
-Read `~/dotfiles/claude/skills/evolve-config/ref-official-standards.md` and extract the `last_verified` date from the version marker.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/evolve-config/ref-official-standards.md` and extract the `last_verified` date from the version marker.
 
 ### Step 2: Query Official Docs via context7
 
