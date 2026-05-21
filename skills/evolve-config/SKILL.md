@@ -44,7 +44,7 @@ description: Use when deciding what configuration artifact to create (agent, ski
 3. Collects reports, applies severity (high/med/low)
 4. Decision: GO / CONDITIONAL-GO / NO-GO per QA report standards
 
-> **Opus 4.7 note**: Auditors should report all findings without pre-filtering — orchestrator applies severity weighting. Set effort to `xhigh` for thorough audits.
+> **Opus note**: Auditors should report all findings without pre-filtering — orchestrator applies severity weighting. Set effort to `xhigh` for thorough audits.
 
 ## References
 

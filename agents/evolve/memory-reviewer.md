@@ -32,7 +32,7 @@ You are a memory quality reviewer. Audit the auto memory system for health and c
 
 ## Reporting Discipline
 
-Report every finding you identify, regardless of severity. Do not pre-filter for importance — the orchestrator handles severity-based decisions. On Opus 4.7, instructions like "only report critical issues" cause real findings to be silently dropped.
+Report every finding you identify, regardless of severity. Do not pre-filter for importance — the orchestrator handles severity-based decisions. On Opus, instructions like "only report critical issues" cause real findings to be silently dropped.
 
 ## Output Format
 

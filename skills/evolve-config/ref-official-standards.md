@@ -1,5 +1,29 @@
 # Official Standards Reference
 
+## Canonical Thresholds
+
+Single source of truth for the numeric limits referenced across auditors and ref docs.
+When a threshold is mentioned elsewhere, treat this table as authoritative.
+
+| Threshold | Value | Applies to | Severity if exceeded |
+|---|---|---|---|
+| SKILL.md max body | **500 lines** | Each skill's main `SKILL.md` | MED (split into ref-*.md) |
+| ref-*.md max body | **200 lines** | Each reference file in a skill's directory | MED |
+| Agent file max body | **200 lines** | Each `agents/*.md` | MED |
+| MEMORY.md max body | **200 lines** | The active project's `~/.claude/projects/*/memory/MEMORY.md` index | HIGH if exceeded by >20% |
+| Memory topic file | **50 lines** | Individual memory topic files (linked from MEMORY.md) | MED |
+| Rule file ideal | **<= 20 lines** | Each `~/.claude/rules/**/*.md` | LOW |
+| Rule file max | **<= 30 lines** | Each `~/.claude/rules/**/*.md` (scheduled-evolve.sh threshold) | MED |
+| Rule file hard limit | **<= 40 lines** | Each `~/.claude/rules/**/*.md` (rules-auditor threshold) | HIGH |
+| CLAUDE.md max | **200 lines** | Global `~/.claude/CLAUDE.md` | HIGH |
+| Description min length | **20 characters** | Skill `description` frontmatter | MED (CSO trigger quality) |
+| Standards TTL | **3 days** | `last_verified` field in this file | Triggers standards-drift-checker re-verification |
+
+When you (an auditor) see a threshold referenced elsewhere, verify it matches this table.
+If a divergence is found, report it as a HIGH-severity inconsistency.
+
+---
+
 ## Version Marker
 
 ```yaml
@@ -47,7 +71,7 @@ context7_library: /ericbuess/claude-code-docs
 | `user-invocable` | No | Stable | `false` = hide from `/` menu |
 | `allowed-tools` | No | Stable | Space-separated or YAML list |
 | `model` | No | Stable | |
-| `effort` | No | Stable | Values: `low`/`medium`/`high`/`xhigh`/`max` — `xhigh` recommended for coding/agentic on Opus 4.7; `max` available but may overthink |
+| `effort` | No | Stable | Values: `low`/`medium`/`high`/`xhigh`/`max` — `xhigh` recommended for coding/agentic on Opus; `max` available but may overthink |
 | `context` | No | Stable | `fork` = run in subagent |
 | `agent` | No | Stable | Built-in or custom subagent type |
 | `hooks` | No | Stable | Skill-scoped lifecycle hooks |
@@ -85,7 +109,7 @@ Skills can reference these in `agent:` field without a corresponding file in `~/
 
 When auditing `agent:` references in skills, check against this list BEFORE flagging as missing.
 
-## Opus 4.7 Behavioral Notes
+## Opus Behavioral Notes
 
 These behaviors differ from Opus 4.6 and inform how prompts/agents should be tuned. Source: official migration guide.
 
@@ -138,7 +162,7 @@ When auditing, account for these facts:
 | `hooks` | Lifecycle hooks | Stable |
 | `memory` | user/project/local | Stable |
 | `background` | true/false | Stable |
-| `effort` | low/medium/high/xhigh/max — `xhigh` recommended for coding/agentic on Opus 4.7; `max` available but may overthink | Stable |
+| `effort` | low/medium/high/xhigh/max — `xhigh` recommended for coding/agentic on Opus; `max` available but may overthink | Stable |
 | `isolation` | worktree | Stable |
 | `color` | red/blue/green/yellow/purple/orange/pink/cyan | Stable |
 | `initialPrompt` | Auto-submitted first prompt | Stable |

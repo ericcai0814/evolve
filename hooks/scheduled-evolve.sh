@@ -1,29 +1,30 @@
 #!/bin/bash
-# scheduled-evolve.sh — Evolve 系統排程腳本
+# scheduled-evolve.sh — Evolve scheduled audit script
 #
-# 用途：
-#   輕量模式（預設，適合排程）：
-#     - 執行規則驅動的 rules-auditor 靜態掃描
-#     - 產出 evolve-log/YYYY-MM-DD.md 執行報告
+# Purpose:
+#   Lightweight mode (default, suitable for scheduling):
+#     - Runs rule-driven static scan against ~/.claude/rules and CLAUDE.md
+#     - Writes report to ~/.claude/evolve/log/YYYY-MM-DD.md
 #
-#   完整模式（--full，等同手動 /evolve）：
-#     - 在輕量模式基礎上，額外呼叫 Claude 執行全套 auditor agents
+#   Full mode (--full, equivalent to manual /evolve):
+#     - Builds on lightweight; full AI auditor agents must run inside a
+#       Claude Code session — see notice section in the report.
 #
-# 用法：
-#   ./scheduled-evolve.sh              # 輕量模式
-#   ./scheduled-evolve.sh --full       # 完整模式（手動觸發）
-#   ./scheduled-evolve.sh --dry-run    # 只報告，不寫入任何檔案
+# Usage:
+#   ./scheduled-evolve.sh              # lightweight (default)
+#   ./scheduled-evolve.sh --full       # full mode notice
+#   ./scheduled-evolve.sh --dry-run    # report to stdout, no file writes
 #
 set -euo pipefail
 
-# ── 常數定義 ──────────────────────────────────────────────
+# ── Constants ───────────────────────────────────────────────
 CLAUDE_DIR="$HOME/.claude"
 EVOLVE_LOG_DIR="$HOME/.claude/evolve/log"
 TODAY=$(date '+%Y-%m-%d')
 REPORT_FILE="$EVOLVE_LOG_DIR/${TODAY}.md"
 SKILL_USAGE_LOG="$CLAUDE_DIR/skill-usage.log"
 
-# ── 引數解析 ──────────────────────────────────────────────
+# ── Argument parsing ────────────────────────────────────────
 MODE="scheduled"    # scheduled | full
 DRY_RUN=false
 
@@ -31,16 +32,14 @@ for arg in "$@"; do
     case "$arg" in
         --full)     MODE="full" ;;
         --dry-run)  DRY_RUN=true ;;
-        *)          echo "[WARN] 不認識的引數: $arg" ;;
+        *)          echo "[WARN] Unknown argument: $arg" ;;
     esac
 done
 
-# ── 計數器 ──────────────────────────────────────────────
+# ── Counters ────────────────────────────────────────────────
 high_issues=0
 
-# ── 輔助函式 ──────────────────────────────────────────────
-
-# ── 初始化報告 ──────────────────────────────────────────────
+# ── Initialize report ───────────────────────────────────────
 init_report() {
     if [[ "$DRY_RUN" == "true" ]]; then
         return
@@ -53,15 +52,15 @@ mode: ${MODE}
 dry_run: false
 ---
 
-# Evolve 執行報告 — ${TODAY}
+# Evolve Audit Report — ${TODAY}
 
-**模式：** ${MODE}
-**執行時間：** $(date '+%Y-%m-%d %H:%M:%S')
+**Mode:** ${MODE}
+**Run at:** $(date '+%Y-%m-%d %H:%M:%S')
 
 HEADER
 }
 
-# 追加內容到報告
+# Append a line to the report (or stdout in dry-run)
 append_report() {
     if [[ "$DRY_RUN" == "true" ]]; then
         echo "$1"
@@ -70,72 +69,73 @@ append_report() {
     echo "$1" >> "$REPORT_FILE"
 }
 
-# ── 步驟 1：Rules 靜態掃描（輕量模式）──────────────────────
+# ── Step 1: Rules static scan (lightweight mode) ────────────
 run_rules_audit() {
-    append_report "## Rules 靜態掃描"
+    append_report "## Rules Static Scan"
     append_report ""
 
     local rules_dir="$HOME/.claude/rules"
     local issues=0
 
     if [[ ! -d "$rules_dir" ]]; then
-        append_report "⚠️ rules 目錄不存在：${rules_dir}"
+        append_report "[WARN] Rules directory not found: ${rules_dir}"
         append_report ""
         return
     fi
 
-    # 規則 1：rule 檔案超過 30 行（超出預算）
+    # Rule 1: rule files exceeding 30 lines (over budget)
     while IFS= read -r -d '' rule_file; do
         local line_count
         line_count=$(wc -l < "$rule_file" | tr -d ' ')
         if [[ "$line_count" -gt 30 ]]; then
-            append_report "- [MED] Rule 檔案過長：\`$(basename "$rule_file")\`（${line_count} 行，建議 ≤30）"
+            append_report "- [MED] Rule file too long: \`$(basename "$rule_file")\` (${line_count} lines, recommended <= 30)"
             ((issues++)) || true
         fi
     done < <(find "$rules_dir" -name "*.md" -print0 2>/dev/null)
 
-    # 規則 2：rule 檔案中含 TODO/FIXME
+    # Rule 2: rule files containing TODO/FIXME markers
     while IFS= read -r -d '' rule_file; do
         if grep -qiE 'TODO|FIXME' "$rule_file" 2>/dev/null; then
-            append_report "- [LOW] Rule 含未完成標記：\`$(basename "$rule_file")\`"
+            append_report "- [LOW] Rule contains unfinished marker: \`$(basename "$rule_file")\`"
             ((issues++)) || true
         fi
     done < <(find "$rules_dir" -name "*.md" -print0 2>/dev/null)
 
-    # 規則 3：CLAUDE.md 行數
+    # Rule 3: CLAUDE.md line count
     local claude_md="$HOME/.claude/CLAUDE.md"
     if [[ -f "$claude_md" ]]; then
         local claude_lines
         claude_lines=$(wc -l < "$claude_md" | tr -d ' ')
         if [[ "$claude_lines" -gt 200 ]]; then
-            append_report "- [HIGH] CLAUDE.md 過長：${claude_lines} 行（建議 ≤200）"
+            append_report "- [HIGH] CLAUDE.md too long: ${claude_lines} lines (recommended <= 200)"
             ((issues++)) || true
             ((high_issues++)) || true
         fi
     fi
 
     if [[ "$issues" -eq 0 ]]; then
-        append_report "✅ 無問題。"
+        append_report "[OK] No issues."
     fi
     append_report ""
 }
 
-# ── 步驟 2：完整模式提示 ──────────────────────────────────
+# ── Step 2: Full-mode notice ────────────────────────────────
 run_full_mode_notice() {
     if [[ "$MODE" != "full" ]]; then
         return
     fi
 
-    append_report "## 完整模式（Full）"
+    append_report "## Full Mode"
     append_report ""
-    append_report "完整的 AI auditor 需在 Claude Code session 中執行 \`/evolve\`。"
-    append_report "排程腳本僅執行輕量靜態檢查，AI agents 無法在排程環境中運行。"
+    append_report "Full AI auditor agents must run inside a Claude Code session via \`/evolve\`."
+    append_report "This scheduled script runs lightweight static checks only — AI agents"
+    append_report "cannot execute in a scheduled / non-interactive environment."
     append_report ""
-    append_report "**建議：** 每週手動執行一次 \`/evolve\` 完整審計。"
+    append_report "**Recommendation:** run \`/evolve\` manually once a week for the full audit."
     append_report ""
 }
 
-# ── 步驟 3：記錄 skill-usage.log ──────────────────────────
+# ── Step 3: Log execution to skill-usage.log ────────────────
 log_execution() {
     if [[ "$DRY_RUN" == "true" ]]; then
         return
@@ -144,7 +144,7 @@ log_execution() {
         >> "$SKILL_USAGE_LOG" 2>/dev/null || true
 }
 
-# ── 步驟 4：最終摘要 ──────────────────────────────────────
+# ── Step 4: Write summary ───────────────────────────────────
 write_summary() {
     local decision="GO"
     if [[ "$high_issues" -gt 0 ]]; then
@@ -155,20 +155,20 @@ write_summary() {
 
     append_report "---"
     append_report ""
-    append_report "## 摘要"
+    append_report "## Summary"
     append_report ""
-    append_report "**決策：** ${decision}"
+    append_report "**Decision:** ${decision}"
     append_report ""
     if [[ "$DRY_RUN" == "false" ]]; then
-        append_report "報告路徑：\`${REPORT_FILE}\`"
+        append_report "Report path: \`${REPORT_FILE}\`"
     fi
 }
 
-# ── 主程式 ──────────────────────────────────────────────
+# ── Main ────────────────────────────────────────────────────
 main() {
-    # ── 每日執行一次防護 ──
+    # Once-per-day guard
     if [[ "$DRY_RUN" == "false" && -f "$REPORT_FILE" ]]; then
-        echo "[scheduled-evolve] 今日已執行，略過（${REPORT_FILE}）"
+        echo "[scheduled-evolve] Already ran today, skipping (${REPORT_FILE})"
         exit 0
     fi
 
@@ -179,9 +179,9 @@ main() {
     log_execution
 
     if [[ "$DRY_RUN" == "false" ]]; then
-        echo "[scheduled-evolve] 完成。報告：${REPORT_FILE}"
+        echo "[scheduled-evolve] Done. Report: ${REPORT_FILE}"
     else
-        echo "[scheduled-evolve] dry-run 完成，無檔案寫入。"
+        echo "[scheduled-evolve] Dry-run complete, no files written."
     fi
 }
 

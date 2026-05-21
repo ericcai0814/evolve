@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
-# skill-static-test.sh — 靜態驗證所有 skill 的結構完整性
-# 用途：獨立執行 or 被 skill-auditor agent 呼叫
-# 零依賴、零 API 成本、零 build step
-# 相容 macOS bash 3.2+（無 declare -A、無 GNU sed）
+# skill-static-test.sh — static structural validation for all skills
+# Purpose: standalone execution, or called by the skill-auditor agent
+# Zero dependencies, zero API cost, zero build step
+# Compatible with macOS bash 3.2+ (no declare -A, no GNU sed)
 #
-# 驗證項目：
-#   1. Frontmatter 完整性（name, description）
-#   2. Agent 引用驗證（agent: X → 對應檔案存在）
-#   3. Skill 交叉引用驗證（引用的 skill 存在）
-#   4. Reference 檔案驗證（ref-*.md 引用 → 檔案存在）
-#   5. 大小限制（SKILL.md < 500 行，ref < 200 行）
-#   6. Description 品質（非空、長度 > 20 字元）
+# Checks:
+#   1. Frontmatter completeness (name, description)
+#   2. Agent reference validation (agent: X -> file exists)
+#   3. Skill cross-reference validation (referenced skill exists)
+#   4. Reference file validation (ref-*.md mentions -> file exists)
+#   5. Size limits (SKILL.md < 500 lines, ref < 200 lines)
+#   6. Description quality (non-empty, length > 20 chars)
 
 set -o pipefail
 
 SKILLS_DIR="${SKILLS_DIR:-$HOME/.claude/skills}"
 AGENTS_DIR="${AGENTS_DIR:-$HOME/.claude/agents}"
 
-# 內建 agent types（Claude Code 原生支援，不需要 .md 檔案）
+# Built-in agent types (natively supported by Claude Code, no .md file required)
 BUILTIN_AGENTS="general-purpose Explore Plan"
 
-# ANSI colors（若 stdout 是 terminal）
+# ANSI colors (only when stdout is a terminal)
 if [ -t 1 ]; then
   RED='\033[0;31m'; YEL='\033[0;33m'; GRN='\033[0;32m'; DIM='\033[0;90m'; RST='\033[0m'
 else
@@ -30,7 +30,7 @@ fi
 # Counters
 HIGH=0; MED=0; LOW=0; PASS=0; TOTAL_SKILLS=0
 
-# Temp file for known skill names（替代 declare -A，macOS bash 3.2 相容）
+# Temp file for known skill names (replaces declare -A for macOS bash 3.2 compat)
 KNOWN_SKILLS_FILE=$(mktemp /tmp/skill-names.XXXXXX)
 trap 'rm -f "$KNOWN_SKILLS_FILE"' EXIT
 
@@ -56,7 +56,7 @@ is_known_skill() {
   grep -qx "$1" "$KNOWN_SKILLS_FILE" 2>/dev/null
 }
 
-# awk-based frontmatter parser（BSD sed 相容問題太多，改用 awk）
+# awk-based frontmatter parser (BSD sed has too many compat quirks, awk is portable)
 get_fm_field() {
   local file="$1" field="$2"
   awk -v field="$field" '
@@ -76,11 +76,11 @@ get_fm_field() {
 
 # ── Collect all skills ──
 
-# 用 -L 追蹤 symlink，去重（realpath 去除 symlink 重複）
+# Follow symlinks (-L) and de-duplicate via sort -u
 SKILL_FILES=""
 while IFS= read -r sf; do
   dir=$(dirname "$sf")
-  # 排除 archive 和 plugins
+  # Exclude archive and plugins
   case "$dir" in
     */archive/*|*/plugins/*) continue ;;
   esac
@@ -89,7 +89,7 @@ while IFS= read -r sf; do
   SKILL_FILES="${SKILL_FILES}${sf}"$'\n'
 done < <(find "$SKILLS_DIR" -follow -maxdepth 2 -name "SKILL.md" 2>/dev/null | sort -u)
 
-# 去重 skill names
+# De-duplicate skill names
 sort -u "$KNOWN_SKILLS_FILE" -o "$KNOWN_SKILLS_FILE"
 
 # ── Stopword list for cross-reference false positives ──
@@ -111,7 +111,7 @@ while IFS= read -r sf; do
   dir=$(dirname "$sf")
   skill_name=$(basename "$dir")
 
-  # 排除 archive / plugins
+  # Exclude archive / plugins
   case "$dir" in
     */archive/*|*/plugins/*) continue ;;
   esac
@@ -119,28 +119,28 @@ while IFS= read -r sf; do
   TOTAL_SKILLS=$((TOTAL_SKILLS + 1))
   skill_errors=0
 
-  # ── 1. Frontmatter 解析 ──
+  # ── 1. Frontmatter parsing ──
 
   fm_name=$(get_fm_field "$sf" "name")
   fm_desc=$(get_fm_field "$sf" "description")
   fm_agent=$(get_fm_field "$sf" "agent")
   fm_context=$(get_fm_field "$sf" "context")
 
-  # 1a. name 必須存在
+  # 1a. name must exist
   if [ -z "$fm_name" ]; then
-    emit HIGH "$skill_name" "frontmatter 缺少 name 欄位"
+    emit HIGH "$skill_name" "frontmatter missing 'name' field"
     skill_errors=$((skill_errors + 1))
   fi
 
-  # 1b. description 必須存在且有意義長度
+  # 1b. description must exist and have meaningful length
   if [ -z "$fm_desc" ]; then
-    emit HIGH "$skill_name" "frontmatter 缺少 description 欄位"
+    emit HIGH "$skill_name" "frontmatter missing 'description' field"
     skill_errors=$((skill_errors + 1))
   else
     desc_len=${#fm_desc}
-    # 多行 description 用 > 或 | 開頭
+    # Multiline description marked with > or |
     if [ "$fm_desc" = ">" ] || [ "$fm_desc" = "|" ]; then
-      # 計算整個 description block
+      # Measure entire description block
       desc_block=$(awk '
         BEGIN { in_fm=0; in_desc=0 }
         /^---$/ { in_fm++; next }
@@ -152,63 +152,63 @@ while IFS= read -r sf; do
       desc_len=${#desc_block}
     fi
     if [ "$desc_len" -lt 20 ] 2>/dev/null; then
-      emit MED "$skill_name" "description 過短（${desc_len} 字元），CSO 觸發品質可能不足"
+      emit MED "$skill_name" "description too short (${desc_len} chars), CSO trigger quality may be insufficient"
       skill_errors=$((skill_errors + 1))
     fi
   fi
 
-  # ── 2. Agent 引用驗證 ──
+  # ── 2. Agent reference validation ──
 
   if [ -n "$fm_agent" ]; then
     if ! is_builtin_agent "$fm_agent"; then
       if [ ! -f "$AGENTS_DIR/${fm_agent}.md" ]; then
-        emit HIGH "$skill_name" "agent: ${fm_agent} -> 找不到 ${AGENTS_DIR}/${fm_agent}.md"
+        emit HIGH "$skill_name" "agent: ${fm_agent} -> not found at ${AGENTS_DIR}/${fm_agent}.md"
         skill_errors=$((skill_errors + 1))
       fi
     fi
   fi
 
-  # ── 3. Skill 交叉引用驗證 ──
-  # 高信度模式：只檢查明確寫著「銜接到某 skill」的引用
-  # 低信度的 /slash-refs 和 `code-example` 不檢查（誤報率太高）
+  # ── 3. Skill cross-reference validation ──
+  # High-confidence patterns only: explicitly stated "chains to skill X" references.
+  # Low-confidence /slash-refs and `code-examples` are skipped (high false-positive rate).
 
   body=$(awk 'BEGIN{c=0} /^---$/{c++; next} c>=2{print}' "$sf")
 
-  # 模式: 「銜接/invoke/委託/觸發 + `skill-name`」
-  flow_refs=$(echo "$body" | grep -oE '(銜接|委託|呼叫|invoke|trigger)\s*`[a-z][-a-z0-9]+`' | grep -oE '`[a-z][-a-z0-9]+`' | tr -d '`' | sort -u)
+  # Pattern: "chain/invoke/delegate/trigger + `skill-name`"
+  flow_refs=$(echo "$body" | grep -oE '(chain|delegate|invoke|trigger|hand off)\s*`[a-z][-a-z0-9]+`' | grep -oE '`[a-z][-a-z0-9]+`' | tr -d '`' | sort -u)
 
   for ref in $flow_refs; do
     [ ${#ref} -lt 3 ] && continue
     is_known_skill "$ref" && continue
-    emit MED "$skill_name" "銜接引用 '${ref}' 不在已知 skills 中"
+    emit MED "$skill_name" "chain reference '${ref}' not found in known skills"
     skill_errors=$((skill_errors + 1))
   done
 
-  # ── 4. Reference 檔案驗證 ──
+  # ── 4. Reference file validation ──
 
   ref_mentions=$(echo "$body" | grep -oE 'ref-[-a-z0-9]+\.md' | sort -u)
   for ref_file in $ref_mentions; do
     if [ ! -f "$dir/$ref_file" ]; then
-      emit HIGH "$skill_name" "引用 ${ref_file} 但檔案不存在於 ${dir}/"
+      emit HIGH "$skill_name" "references ${ref_file} but file does not exist in ${dir}/"
       skill_errors=$((skill_errors + 1))
     fi
   done
 
-  # 檢查目錄下的 ref-*.md 是否被 SKILL.md 引用（死檔案偵測）
+  # Check whether ref-*.md files in the directory are actually referenced by SKILL.md (dead-file detection)
   for ref_path in "$dir"/ref-*.md; do
     [ -f "$ref_path" ] || continue
     ref_basename=$(basename "$ref_path")
     if ! grep -q "$ref_basename" "$sf"; then
-      emit LOW "$skill_name" "${ref_basename} 存在但未被 SKILL.md 引用（可能是死檔案）"
+      emit LOW "$skill_name" "${ref_basename} exists but is not referenced by SKILL.md (possibly dead file)"
       skill_errors=$((skill_errors + 1))
     fi
   done
 
-  # ── 5. 大小限制 ──
+  # ── 5. Size limits ──
 
   skill_lines=$(wc -l < "$sf" | tr -d ' ')
   if [ "$skill_lines" -gt 500 ] 2>/dev/null; then
-    emit MED "$skill_name" "SKILL.md 超過 500 行（${skill_lines} 行），考慮拆分到 ref-*.md"
+    emit MED "$skill_name" "SKILL.md exceeds 500 lines (${skill_lines}), consider splitting to ref-*.md"
     skill_errors=$((skill_errors + 1))
   fi
 
@@ -217,17 +217,17 @@ while IFS= read -r sf; do
     ref_lines=$(wc -l < "$ref_path" | tr -d ' ')
     ref_basename=$(basename "$ref_path")
     if [ "$ref_lines" -gt 200 ] 2>/dev/null; then
-      emit MED "$skill_name" "${ref_basename} 超過 200 行（${ref_lines} 行）"
+      emit MED "$skill_name" "${ref_basename} exceeds 200 lines (${ref_lines})"
       skill_errors=$((skill_errors + 1))
     fi
   done
 
-  # ── 6. context 欄位驗證 ──
+  # ── 6. context field validation ──
 
   if [ -n "$fm_context" ]; then
     case "$fm_context" in
       fork|inline) ;;
-      *) emit MED "$skill_name" "context: '${fm_context}' 不是合法值（應為 fork 或 inline）"
+      *) emit MED "$skill_name" "context: '${fm_context}' is not valid (expected fork or inline)"
          skill_errors=$((skill_errors + 1)) ;;
     esac
   fi

@@ -80,7 +80,7 @@ description: Use when writing, updating, or reviewing auto memory entries.
 
 ## Reporting Discipline
 
-Report every finding you identify, regardless of severity. Do not pre-filter for importance — the orchestrator handles severity-based decisions. On Opus 4.7, instructions like "only report critical issues" cause real findings to be silently dropped.
+Report every finding you identify, regardless of severity. Do not pre-filter for importance — the orchestrator handles severity-based decisions. On Opus, instructions like "only report critical issues" cause real findings to be silently dropped.
 
 ## Output Format
 
