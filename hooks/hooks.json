@@ -1,0 +1,16 @@
+{
+  "description": "Run a daily lightweight evolve audit on session start (background, once-per-day guard built into the script)",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "nohup bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scheduled-evolve.sh\" > /dev/null 2>&1 &"
+          }
+        ]
+      }
+    ]
+  }
+}
