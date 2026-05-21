@@ -1,5 +1,9 @@
 # evolve
 
+**Language:** 繁體中文 | [English](README.en.md)
+
+---
+
 Claude Code 配置生態系健檢工具。`/evolve` 觸發 orchestrator 平行 dispatch 六個 specialized auditor sub-agents，稽核 `~/.claude/` 的 agents / skills / hooks / rules / memory 健康度，產出 **GO** / **CONDITIONAL-GO** / **NO-GO** 報告。
 
 ## 做什麼
@@ -103,10 +107,6 @@ evolve/
 └── scripts/
     └── skill-static-test.sh               # 零相依 skill validator
 ```
-
-## English
-
-See [README.en.md](README.en.md) for the English version.
 
 ## License
 

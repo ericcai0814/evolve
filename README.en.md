@@ -1,5 +1,9 @@
 # evolve
 
+**Language:** [繁體中文](README.md) | English
+
+---
+
 Configuration ecosystem auditor for Claude Code. Audits the health of your `~/.claude/` setup — agents, skills, hooks, rules, and memory — via an orchestrator that dispatches six specialized auditor sub-agents in parallel and synthesizes a GO / CONDITIONAL-GO / NO-GO report.
 
 ## What it does
@@ -103,10 +107,6 @@ evolve/
 └── scripts/
     └── skill-static-test.sh               # Zero-dependency skill validator
 ```
-
-## 中文
-
-繁體中文版見 [README.md](README.md)。
 
 ## License
 
